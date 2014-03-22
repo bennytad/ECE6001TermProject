@@ -35,12 +35,9 @@ public class Scheduler{
     try{
       //create a ServerSocket listening at specified port
       ServerSocket serverSocket = new ServerSocket(schedulerPort);
-      debug("starting to read socket");
       while(true){
         //accept connection from worker or client
-    	debug("Listening on socket");
         new ParallelScheduler(serverSocket.accept(), cluster).start();
-        debug("God data from Socket and passed it on");
       }
     } catch(Exception e) {
       e.printStackTrace();

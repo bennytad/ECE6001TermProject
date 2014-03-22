@@ -1,8 +1,7 @@
 package scheduler;
 import java.io.*;
 import java.net.*;
-import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.concurrent.CountDownLatch;
 
 import common.JobFactory;
 import common.Opcode;
@@ -26,7 +25,7 @@ public class ParallelScheduler extends Thread{
 	    
 	    public void run() {
 	      try{
-		    	Scheduler.debug("running thread");
+		      Scheduler.debug("running thread");
 	          DataInputStream dis = new DataInputStream(socket.getInputStream());
 	          DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
 	          
@@ -50,8 +49,6 @@ public class ParallelScheduler extends Thread{
 
 	          //a connection from client submitting a job
 	          if(code == Opcode.new_job){
-	          	
-	            Thread.sleep(10000);
 	          	
 	            String className = dis.readUTF();
 	            long len = dis.readLong();
@@ -80,38 +77,40 @@ public class ParallelScheduler extends Thread{
 	            //get the tasks
 	            int taskIdStart = 0;
 	            int numTasks = JobFactory.getJob(fileName, className).getNumTasks();
-
-	            //get a free worker
-	            WorkerNode n = cluster.getFreeWorkerNode();
+	            int numFreeWorkers = cluster.freeWorkers.size();
 	            
-	            //notify the client
-	            dos.writeInt(Opcode.job_start);
-	            dos.flush();
+	            if(numFreeWorkers > numTasks)
+	            {
+	            	CountDownLatch doneSignal = new CountDownLatch(numTasks);
+	            	
+	            	//notify the client
+		            dos.writeInt(Opcode.job_start);
+		            dos.flush();
+		            
+	            	//assign a task to each free worker
+	            	ParallelTaskAssigner[] taskassigners = new ParallelTaskAssigner[numTasks];
+	            	for(int i = 0; i < numTasks; ++i)
+	            	{
+	            		WorkerNode n = cluster.getFreeWorkerNode();
+	            		taskassigners[i] = new ParallelTaskAssigner(className, n, jobId, taskIdStart, 1, dos, doneSignal);
+	            		taskassigners[i].start();
+	            		
+	            		++taskIdStart;
+	            	}
 
-	            //assign the tasks to the worker
-	            Socket workerSocket = new Socket(n.addr, n.port);
-	            DataInputStream wis = new DataInputStream(workerSocket.getInputStream());
-	            DataOutputStream wos = new DataOutputStream(workerSocket.getOutputStream());
-	            
-	            wos.writeInt(Opcode.new_tasks);
-	            wos.writeInt(jobId);
-	            wos.writeUTF(className);
-	            wos.writeInt(taskIdStart);
-	            wos.writeInt(numTasks);
-	            wos.flush();
-
-	            //repeatedly process the worker's feedback
-	            while(wis.readInt() == Opcode.task_finish) {
-	              dos.writeInt(Opcode.job_print);
-	              dos.writeUTF("task "+wis.readInt()+" finished on worker "+n.id);
-	              dos.flush();
+	            	doneSignal.await();
+	            	for(int i = 0; i < numTasks; ++i)
+	            	{
+	            		cluster.addFreeWorkerNode(taskassigners[i].n);
+	            	}
+		            
 	            }
-
-	            //disconnect and free the worker
-	            wis.close();
-	            wos.close();
-	            workerSocket.close();
-	            cluster.addFreeWorkerNode(n);
+	            else 
+	            {
+	            	//since you have more tasks than free workers, 
+	            	//divide tasks with each worker
+	            	
+	            }
 
 	            //notify the client
 	            dos.writeInt(Opcode.job_finish);
@@ -121,11 +120,8 @@ public class ParallelScheduler extends Thread{
 	          dis.close();
 	          dos.close();
 	          socket.close();
-
-		    	Scheduler.debug("Finished Thread");
+	          
 	      } catch(Exception e) {
-
-		    	Scheduler.debug("Error!");
 	        e.printStackTrace();
 	      }
 	        
