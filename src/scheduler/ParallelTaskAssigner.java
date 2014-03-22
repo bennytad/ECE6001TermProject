@@ -3,8 +3,8 @@ package scheduler;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.net.Socket;
-import java.util.concurrent.CountDownLatch;
 
+import scheduler.Scheduler.Cluster;
 import scheduler.Scheduler.WorkerNode;
 import common.Opcode;
 
@@ -16,24 +16,28 @@ public class ParallelTaskAssigner extends Thread{
 	private int taskIdStart;
 	private int numTasks;
 	private DataOutputStream dos;
-	private CountDownLatch doneSignal;
+	private JobBox job;
+    public Cluster cluster = null;
 	
+
 	public ParallelTaskAssigner(
-				String className, 
-				WorkerNode n, 
-				int jobId, 
-				int taskIdStart, 
-				int numTasks, 
-				DataOutputStream dos, 
-				CountDownLatch doneSignal)
+				JobBox job,
+				Cluster cluster)
 	{
-		this.className = className;
-		this.n = n;
-		this.jobId = jobId;
-		this.taskIdStart = taskIdStart;
-		this.numTasks = numTasks;
-		this.dos = dos; 
-		this.doneSignal = doneSignal;
+		this.className = job.getClassName();
+		this.cluster = cluster;
+		this.n = this.cluster.getFreeWorkerNode();
+		this.jobId = job.getJobId();
+		this.taskIdStart = job.getNextTask();
+		this.numTasks = 1;
+		this.dos = job.getStream();
+		this.job = job;
+		
+		//if it has more tasks, put it back
+		if(taskIdStart!=0)
+        {
+       	 QueueMonitor.addJob(job);
+        }
 	}
 	
 	 public void run() {
@@ -60,12 +64,14 @@ public class ParallelTaskAssigner extends Thread{
 				  dos.flush();
 			  }
 			}
-	
+			job.taskDone();
 	         //disconnect and free the worker
 	         wis.close();
 	         wos.close();
 	         workerSocket.close();
-	         doneSignal.countDown();
+	         
+	         //put back the cluster we used
+	         this.cluster.addFreeWorkerNode(n);
 		 }
 		 catch(Exception e)
 		 {

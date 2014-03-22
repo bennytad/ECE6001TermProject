@@ -7,7 +7,7 @@ public class Hello extends Job {
 
   @Override
   public void config() {
-    setNumTasks(4); //set the number of tasks
+    setNumTasks(10); //set the number of tasks
   }
 
   @Override

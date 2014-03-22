@@ -48,8 +48,8 @@ public class ParallelScheduler extends Thread{
 	          }
 
 	          //a connection from client submitting a job
-	          if(code == Opcode.new_job){
-	          	
+	          if(code == Opcode.new_job){ 
+	        	  
 	            String className = dis.readUTF();
 	            long len = dis.readLong();
 
@@ -73,46 +73,18 @@ public class ParallelScheduler extends Thread{
 	            fos.flush();
 	            fos.close();
 	            
-
-	            //get the tasks
-	            int taskIdStart = 0;
 	            int numTasks = JobFactory.getJob(fileName, className).getNumTasks();
-	            int numFreeWorkers = cluster.freeWorkers.size();
 	            
-	            if(numFreeWorkers > numTasks)
-	            {
-	            	CountDownLatch doneSignal = new CountDownLatch(numTasks);
-	            	
-	            	//notify the client
-		            dos.writeInt(Opcode.job_start);
-		            dos.flush();
-		            
-	            	//assign a task to each free worker
-	            	ParallelTaskAssigner[] taskassigners = new ParallelTaskAssigner[numTasks];
-	            	for(int i = 0; i < numTasks; ++i)
-	            	{
-	            		WorkerNode n = cluster.getFreeWorkerNode();
-	            		taskassigners[i] = new ParallelTaskAssigner(className, n, jobId, taskIdStart, 1, dos, doneSignal);
-	            		taskassigners[i].start();
-	            		
-	            		++taskIdStart;
-	            	}
-
-	            	doneSignal.await();
-	            	for(int i = 0; i < numTasks; ++i)
-	            	{
-	            		cluster.addFreeWorkerNode(taskassigners[i].n);
-	            	}
-		            
-	            }
-	            else 
-	            {
-	            	//since you have more tasks than free workers, 
-	            	//divide tasks with each worker
-	            	
-	            }
-
-	            //notify the client
+	        	JobBox job_box = new JobBox(className, numTasks, jobId, dos); 
+	        	
+	        	QueueMonitor.addJob(job_box);
+	            
+	        	while(!job_box.isJobDone())
+	        	{
+	        		//can improve performance with using CountDownLatch maybe?
+	        		Thread.sleep(100);
+	        	}
+	        	
 	            dos.writeInt(Opcode.job_finish);
 	            dos.flush();
 	          }

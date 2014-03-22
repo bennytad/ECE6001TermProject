@@ -1,19 +1,15 @@
 package scheduler;
 
-import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
 import java.util.LinkedList;
 
-import common.*;
 
 public class Scheduler{
 
   int schedulerPort;
   Cluster cluster;
   int jobIdNext;
-  //Format: OP_CODE,JOB_FILE,CLASS_NAME
-  ArrayList<String> data_list = new ArrayList<String>();
   
   public static void debug(String data)
   {
@@ -30,11 +26,13 @@ public class Scheduler{
     Scheduler scheduler = new Scheduler(Integer.parseInt(args[0]));
     scheduler.run();
   }
-
+  
   public void run() {
     try{
       //create a ServerSocket listening at specified port
       ServerSocket serverSocket = new ServerSocket(schedulerPort);
+	  QueueMonitor queue_monitor = new QueueMonitor(this.cluster);
+	  queue_monitor.start();
       while(true){
         //accept connection from worker or client
         new ParallelScheduler(serverSocket.accept(), cluster).start();
@@ -42,8 +40,6 @@ public class Scheduler{
     } catch(Exception e) {
       e.printStackTrace();
     }
-      
-    //serverSocket.close();
   }
   
 
@@ -111,5 +107,6 @@ public class Scheduler{
     }
   }
 
+  
 
 }
