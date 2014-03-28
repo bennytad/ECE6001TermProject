@@ -17,15 +17,12 @@ public class ParallelScheduler extends Thread{
 	 
 	    public ParallelScheduler(Socket socket, Cluster cluster) {
 	        super("ParallelScheduler");
-	    	Scheduler.debug("Started thread");
 	        this.cluster = cluster;
 	        this.socket = socket;
-	    	Scheduler.debug("created thread");
 	    }
 	    
 	    public void run() {
 	      try{
-		      Scheduler.debug("running thread");
 	          DataInputStream dis = new DataInputStream(socket.getInputStream());
 	          DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
 	          

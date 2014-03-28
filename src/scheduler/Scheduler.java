@@ -11,11 +11,6 @@ public class Scheduler{
   Cluster cluster;
   int jobIdNext;
   
-  public static void debug(String data)
-  {
-	  if(false) System.out.println(data);
-  }
-  
   Scheduler(int p) {
     schedulerPort = p;
     cluster = new Cluster();
@@ -38,7 +33,7 @@ public class Scheduler{
         new ParallelScheduler(serverSocket.accept(), cluster).start();
       }
     } catch(Exception e) {
-		System.out.println("***Fatal ERROR: Main Queue Monitor died. Need to restart scheduler");
+		System.out.println("***Fatal ERROR: The scheduler has died. You need to restart scheduler");
     	System.out.println();
       e.printStackTrace();
     }
