@@ -15,12 +15,13 @@ public class Randomsleep extends Job {
   @Override
   public void task(int tId) {
 	  Random rand = new Random();
-	  int n = rand.nextInt(100);
-    System.out.println("task"+tId+": Hello World"); //this string will be printed out from worker instead of client
+	  int n = rand.nextInt(5);
+    System.out.println("task"+tId+": Started"); 
     try{
-      Thread.sleep(1000*n);
+      Thread.sleep(5000);
     } catch(Exception e) {
       e.printStackTrace();
     }
+    System.out.println("task"+tId+": Done!");
   }
 }

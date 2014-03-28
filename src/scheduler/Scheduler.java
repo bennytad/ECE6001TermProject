@@ -38,6 +38,8 @@ public class Scheduler{
         new ParallelScheduler(serverSocket.accept(), cluster).start();
       }
     } catch(Exception e) {
+		System.out.println("***Fatal ERROR: Main Queue Monitor died. Need to restart scheduler");
+    	System.out.println();
       e.printStackTrace();
     }
   }

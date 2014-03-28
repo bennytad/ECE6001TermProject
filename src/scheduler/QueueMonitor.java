@@ -51,16 +51,26 @@ public class QueueMonitor extends Thread{
 				{
 					Thread.sleep(100);
 				}
-				//once we have a job, we need to assign task
+				//once we have a job, we need to remove it from the queue so that there is no task assignment 
+				//contention
 				JobBox current_job = removeJob();
+				//if there is no more task, continue
+				if(current_job.isJobDone()) continue;
 				
-		    	//notify the client
-				if(!current_job.taskInProgress())
+		    	//if this is the first task, notify the client
+				if(current_job.isFirstTask())
 				{
 			        current_job.getStream().writeInt(Opcode.job_start);
 			        current_job.getStream().flush();
 				}
+				//if there are no more tasks to do, put it back so that the asks can be done
+				else if(!current_job.hasTasksToProcess())
+				{
+					addJob(current_job);
+					continue;//no tasks to do
+				}
 				//the task assigner needs to put back the job on the queue if it's not the last task
+				//This ensures that there is no contention while removing a task from the Job
 				//Also, once done, it needs to put back the worker in the cluster
 				
 				ParallelTaskAssigner task = new ParallelTaskAssigner(current_job, cluster);
@@ -69,6 +79,7 @@ public class QueueMonitor extends Thread{
 		}
 		catch(Exception e)
 		{
+			System.out.println("***Fatal ERROR: Main Queue Monitor died. Need to restart scheduler");
 			e.printStackTrace();
 		}
 	}
