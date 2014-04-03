@@ -1,13 +1,23 @@
 package scheduler;
 import java.io.*;
 import java.net.*;
-import java.util.concurrent.CountDownLatch;
 
 import common.JobFactory;
 import common.Opcode;
 import scheduler.Scheduler.*;
-import scheduler.Scheduler;
 
+/**
+ * 
+ * This class handles the main job of the Scheduler in a parallel fasion:
+ * 1.	When a new worker request is received, it will process and add the work to its pool
+ * 2.	When a new job is received, it will package the job under <code>JobBox</code> and put
+ * 		the <code>JobBox</code> on the <code>QueueMonitor</code> where it will be monitored and
+ * 		processed by the <code>QueueMonitor</code>. It will then spin until the job gets done 
+ * 		and will return after printing the sucessful message
+ *
+ * Note: this class extends the <code>Thread</code> superclass and hence will allow the scheduler
+ * to service incoming socket requests without blocking.
+ */
 public class ParallelScheduler extends Thread{
 		
 		private Socket socket = null;
@@ -15,12 +25,21 @@ public class ParallelScheduler extends Thread{
 	    public Cluster cluster = null;
 	    public static int jobIdNext;
 	 
+	    /**
+	     * Initializes the <code>ParallelScheduler</code> class 
+	     * 
+	     * @param socket
+	     * @param cluster
+	     */
 	    public ParallelScheduler(Socket socket, Cluster cluster) {
 	        super("ParallelScheduler");
 	        this.cluster = cluster;
 	        this.socket = socket;
 	    }
 	    
+	    /**
+	     * Performs the main task of putting jobs on the queue and monitoring their progress
+	     */
 	    public void run() {
 	      try{
 	          DataInputStream dis = new DataInputStream(socket.getInputStream());
@@ -93,8 +112,6 @@ public class ParallelScheduler extends Thread{
 	      } catch(Exception e) {
 	        e.printStackTrace();
 	      }
-	        
-	      //serverSocket.close();
 	    }
 
 	    
